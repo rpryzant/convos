@@ -9,15 +9,12 @@ import sys
 from tqdm import tqdm
 import os
 import uuid
-from selenium import webdriver
 from ffmpy import FFmpeg
 from pyunpack import Archive
 import re
 sub_pages = sys.argv[1]
 out_root = sys.argv[2]
 langs = sys.argv[3:]
-driver = webdriver.Chrome()
-driver.set_page_load_timeout(10)   # 10 second limit
 
 
 def download_subfile(url, dest):
