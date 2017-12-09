@@ -3,6 +3,7 @@ downloads a subtitle for a language
 
 python dl_subs_for_lang.py ../data/subtitle_pages/sub_pages.txt [out_dir] [lang1] [lang2] ..
 """
+import time
 from collections import defaultdict
 import sys
 from tqdm import tqdm
@@ -11,7 +12,7 @@ import uuid
 from selenium import webdriver
 from ffmpy import FFmpeg
 from pyunpack import Archive
-
+import re
 sub_pages = sys.argv[1]
 out_root = sys.argv[2]
 langs = sys.argv[3:]
@@ -23,29 +24,20 @@ def download_subfile(url, dest):
     """ download a subscene file at url "url" to                                       
         the location specified by "dest"                                                 
     """
-    def get_dl_button(url):
-        try:
-            driver.get(url)
-            return driver.find_element_by_id('downloadButton')
-        except Exception as e:
-            print 'ERROR: cant get dl button ', url
-            print e
-            return False
-
     # download file                                                                   
-    elem = get_dl_button(url)
-    if not elem:
-        elem = get_dl_button(url)
-    if not elem:
-        print 'ERROR: couldnt get dl button x2', url
-        return None
-
-    dl_link = elem.get_attribute('href')
     dl_id = str(uuid.uuid4())
-    target = os.path.join(dest, dl_id)
-    os.system('wget -nc -P %s %s -O %s' % (dest, dl_link, target))
+    target_html = os.path.join(dest, 'html-%s' % dl_id)
+    target_file = os.path.join(dest, 'file-%s' % dl_id)
 
-    return target
+    os.system('wget -nc -P %s %s -O %s' % (dest, url, target_html))
+    time.sleep(2)
+    
+    dl_line = next(l for l in open(target_html) if 'id="downloadButton"' in l)
+    dl_link = 'https://subscene.com/' + re.findall('href=\"(.*?)\"', dl_line)[0]
+
+    os.system('wget -nc -P %s %s -O %s' % (dest, dl_link, target_file))
+
+    return target_file
 
 
 
@@ -114,6 +106,7 @@ for l, t in tqdm(title_gen, total=len(langs)*len(titles_to_dl)):
         if not os.path.exists(dl_dir):
             os.makedirs(dl_dir)
         for url in urls[t, l]:
+            time.sleep(2)
             try:
                 if download(url, dl_dir):
                     pass
