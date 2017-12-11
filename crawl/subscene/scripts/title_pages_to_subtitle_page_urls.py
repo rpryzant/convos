@@ -20,29 +20,20 @@ def parse_title_page(html_file):
         sub_table = soup.find('table').find_all('tr')[1:]
     except:
         return
+
     for i, td in enumerate(sub_table):
-        if i % 2 == 0:
-            # language only -- can throw away because in URL
-            continue
-            print td.td.attrs['id']
+        if 'a1' in td.td.attrs['class']:
+            try:
+                srt_url = td.td.a.attrs['href']
+                srt_url = SUBSCENE_BASE_URL + srt_url
 
-        try:
-            srt_url = td.td.a.attrs['href']
-            srt_url = SUBSCENE_BASE_URL + srt_url
+                language = srt_url.split('/')[-2]
 
-            language = srt_url.split('/')[-2]
+                title = html_file.split('/')[-1]
 
-            title = html_file.split('/')[-1]
-
-            yield language, srt_url, title
-        except:
-            pass
-
-
-
-
-
-
+                yield language, srt_url, title
+            except:
+                pass
 
 
 if __name__ == '__main__':
