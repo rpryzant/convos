@@ -13,13 +13,18 @@ import uuid
 from ffmpy import FFmpeg
 from pyunpack import Archive
 import re
+
+# sys.setdefaultencoding() does not exist, here!
+reload(sys)  # Reload does the trick!
+sys.setdefaultencoding('UTF8')
+
 sub_pages = sys.argv[1]
 out_root = sys.argv[2]
 langs = sys.argv[3:]
 
 # get supported encodings
 os.system('iconv -l > tmp')
-ENCODINGS = [w.upper() for l in open('tmp').readlines() for w in l.strip().split()]
+ENCODINGS = [w.upper().strip('/') for l in open('tmp').readlines() for w in l.strip().split()]
 
 
 
@@ -74,7 +79,7 @@ def extract_archive(target, dest):
 def rm_exclude(dir, suffix):
     os.system("find %s -type f ! -name '*%s' -delete" % (dir, suffix))
 
-def convert_to_utf8(file):
+def convert_to_utf8(f):
     def get_charset(fp):
         """ detect encoding of a file """
         tmp = os.system('head %s > head.tmp' % fp)
@@ -85,17 +90,17 @@ def convert_to_utf8(file):
 
     # if that character set is supported by iconv, convert it 
     try:
-        charset = get_charset(file)
+        charset = get_charset(f)
         if charset in ENCODINGS:
-            os.system('iconv -f %s -t UTF-8 "%s" > "%s"' % (charset, file, file + '.utf8.srt'))
-            os.system('mv "%s" "%s"' % (file + '.utf8.srt', file))
-            print '"%s" encoding was: %s' % (file, charset)
+            os.system('iconv -f %s -t UTF-8 "%s" > "%s"' % (charset, f, f + '.utf8.srt'))
+            os.system('mv "%s" "%s"' % (f + '.utf8.srt', f))
+            print '## ATTEMPTED CONVERSION "%s" encoding was: %s' % (f, charset)
         else:
-            print 'REMOVING %s. \n\t: unknown encoding!'
-            os.system('rm %s' % file)
+            print '## REMOVING %s. \n\t: unknown encoding: %s' % (f, charset)
+            os.system('rm %s' % f)
     except Exception as e:
-        print 'SKIPPED \n\t %s' % file
-        print 'Exception: ', e
+        print '## SKIPPED \n\t %s' % f
+        print '## EXCEPTION: ', e
 
 
 def download(url, dest):
