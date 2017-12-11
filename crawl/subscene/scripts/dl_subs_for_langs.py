@@ -102,6 +102,12 @@ def convert_to_utf8(f):
         print '## SKIPPED \n\t %s' % f
         print '## EXCEPTION: ', e
 
+def replace_filename_whitespace(fp):
+    if ' ' in fp:
+        new_fp = fp.replace(' ', '_')
+        os.rename(fp, new_fp)
+        return new_fp
+    return fp
 
 def download(url, dest):
     """ downloads a file from url "url" into destination "dest",
@@ -115,16 +121,11 @@ def download(url, dest):
         rm_exclude(dest, '.srt')
         new_files = set(os.listdir(dest)) - set(tmp)
         for file in new_files:
-            path = os.path.join(dest, file)
-            if ' ' in path:
-                os.rename(path, path.replace(' ', '_'))
-                path = path.replace(' ', '_')
+            path = replace_filename_whitespace(os.path.join(dest,file))
             convert_to_utf8(path)
         return True
     else:
         return False
-
-
 
 
 
@@ -139,7 +140,7 @@ titles_to_dl = [t for t in d if all([l in d[t] for l in langs]) ]
 
 
 i = 0
-title_gen = ((l, t) for l in langs for t in titles_to_dl)
+title_gen = ((l, t.replace(' ', '_')) for l in langs for t in titles_to_dl)
 for l, t in tqdm(title_gen, total=len(langs)*len(titles_to_dl)):
         dl_dir = os.path.join(out_root, l, t)
         if not os.path.exists(dl_dir):
