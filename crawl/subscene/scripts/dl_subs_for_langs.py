@@ -2,6 +2,7 @@
 downloads a subtitle for a language
 
 python dl_subs_for_lang.py ../data/subtitle_pages/sub_pages.txt [out_dir] [lang1] [lang2] ..
+python dl_subs_for_langs.py ../data/subtitle_pages/sub_pages.txt ../data/subs/ english japanese
 """
 import time
 from collections import defaultdict
@@ -15,6 +16,11 @@ import re
 sub_pages = sys.argv[1]
 out_root = sys.argv[2]
 langs = sys.argv[3:]
+
+# get supported encodings
+os.system('iconv -l > tmp')
+ENCODINGS = [w.upper() for l in open('tmp').readlines() for w in l.strip().split()]
+
 
 
 def download_subfile(url, dest):
@@ -37,24 +43,23 @@ def download_subfile(url, dest):
     return target_file
 
 
-
 def convert_all_to_srt(dir):
     """ converts all the files in a dir to srt format                                      
     """
     def convert_to_srt(target, dest):
         ff = FFmpeg(
             inputs={target: None},
-            outputs={dest: None})
+            outputs={dest: None},
+            global_options=['-v', 'quiet'])
         ff.run()
 
     for f in os.listdir(dir):
         try:
             f = os.path.join(dir, f)
-            if '.srt' not in f:
+            if '.srt' not in f and 'html-' not in f and not 'file-' in f:
                 convert_to_srt(f, f + '.srt')
         except:
             print 'ERROR: CONVERSION FAILURE ON', f
-
 
 
 def extract_archive(target, dest):
@@ -69,6 +74,29 @@ def extract_archive(target, dest):
 def rm_exclude(dir, suffix):
     os.system("find %s -type f ! -name '*%s' -delete" % (dir, suffix))
 
+def convert_to_utf8(file):
+    def get_charset(fp):
+        """ detect encoding of a file """
+        tmp = os.system('head %s > head.tmp' % fp)
+        output = os.popen('chardetect head.tmp').read()
+        os.system('rm head.tmp')
+        charset = output.split(':')[1].strip().split(' ')[0]
+        return charset.upper()
+
+    # if that character set is supported by iconv, convert it 
+    try:
+        charset = get_charset(file)
+        if charset in ENCODINGS:
+            os.system('iconv -f %s -t UTF-8 "%s" > "%s"' % (charset, file, file + '.utf8.srt'))
+            os.system('mv "%s" "%s"' % (file + '.utf8.srt', file))
+            print '"%s" encoding was: %s' % (file, charset)
+        else:
+            print 'REMOVING %s. \n\t: unknown encoding!'
+            os.system('rm %s' % file)
+    except Exception as e:
+        print 'SKIPPED \n\t %s' % file
+        print 'Exception: ', e
+
 
 def download(url, dest):
     """ downloads a file from url "url" into destination "dest",
@@ -76,9 +104,14 @@ def download(url, dest):
     """
     dlded_filepath = download_subfile(url, dest)
     if dlded_filepath:
+        tmp = os.listdir(dest)
         output = extract_archive(dlded_filepath, dest)
         convert_all_to_srt(dest)
         rm_exclude(dest, '.srt')
+        os.system('rename "s/ /_/g" %s/*' % dest)
+        new_files = set(os.listdir(dest)) - set(tmp)
+        for file in new_files:
+            convert_to_utf8(os.path.join(dest, file))
         return True
     else:
         return False
@@ -96,6 +129,7 @@ for l in open(sub_pages):
 
 titles_to_dl = [t for t in d if all([l in d[t] for l in langs]) ]
 
+
 i = 0
 title_gen = ((l, t) for l in langs for t in titles_to_dl)
 for l, t in tqdm(title_gen, total=len(langs)*len(titles_to_dl)):
@@ -110,9 +144,11 @@ for l, t in tqdm(title_gen, total=len(langs)*len(titles_to_dl)):
                 else:
                     print 'failure!', url
             except KeyboardInterrupt:
-                print 'QUITTING'
+                print 'QUITTING...'
+                os.system('rm tmp')
                 quit()
             except Exception as e:
                 print 'ERROR on ', url, 'exception ', e
         i += 1
 
+os.system('rm tmp')
