@@ -95,7 +95,7 @@ def convert_to_utf8(f):
             os.system('iconv -f %s -t UTF-8 "%s" > "%s"' % (charset, f, f + '.utf8.srt'))
             os.system('mv "%s" "%s"' % (f + '.utf8.srt', f))
             print '## ATTEMPTED CONVERSION "%s" encoding was: %s' % (f, charset)
-        else:
+        elif 'UTF' not in charset: # possible weak point
             print '## REMOVING %s. \n\t: unknown encoding: %s' % (f, charset)
             os.system('rm %s' % f)
     except Exception as e:
@@ -113,10 +113,13 @@ def download(url, dest):
         output = extract_archive(dlded_filepath, dest)
         convert_all_to_srt(dest)
         rm_exclude(dest, '.srt')
-        os.system('rename "s/ /_/g" %s/*' % dest)
         new_files = set(os.listdir(dest)) - set(tmp)
         for file in new_files:
-            convert_to_utf8(os.path.join(dest, file))
+            path = os.path.join(dest, file)
+            if ' ' in path:
+                os.rename(path, path.replace(' ', '_'))
+                path = path.replace(' ', '_')
+            convert_to_utf8(path)
         return True
     else:
         return False
