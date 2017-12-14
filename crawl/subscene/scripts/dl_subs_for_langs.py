@@ -146,7 +146,7 @@ for l, t in tqdm(title_gen, total=len(langs)*len(titles_to_dl)):
         if not os.path.exists(dl_dir):
             os.makedirs(dl_dir)
         for url in urls[t, l]:
-            time.sleep(2)
+            time.sleep(0.5)
             try:
                 if download(url, dl_dir):
                     pass
