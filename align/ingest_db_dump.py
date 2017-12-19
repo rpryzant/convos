@@ -57,7 +57,6 @@ for mid in df['MovieID'].unique():
         for _, esub in eng_subs.iterrows():
             jsrt_path = get_or_extract_sub_path(jsub)
             esrt_path = get_or_extract_sub_path(esub)
-            print jsrt_path, esrt_path
             alignments.append(align(jsrt_path, esrt_path))
 
     # somehow pick the best pairing..?
